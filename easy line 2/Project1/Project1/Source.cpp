@@ -4,6 +4,9 @@
 
 using namespace std;
 
+const int X_ID = 0;
+const int Y_ID = 1;
+
 int sign(float delta) {
 	int res = delta < 0 ? -1 : 1;
 	return res;
@@ -33,16 +36,16 @@ void easyLine() {
 		delta[i] = distance[i] / len;// предполагаем, что большее из приращений = 1-це растра
 	}
 
-	float currentP[N];
+	float p[N];
 	for (int i = 0; i < N; i++) {
-		currentP[i] = startP[i] + 0.5*sign(delta[i]); // округляем величины, а не отбрасываем дробную часть
+		p[i] = startP[i] + 0.5*sign(delta[i]); // округляем величины, а не отбрасываем дробную часть
 	}
 
 	for (int currentStep = 1; currentStep < len; currentStep++) {
-		glVertex2i((int)currentP[0], (int)currentP[1]);
+		glVertex2i((int)p[0], (int)p[1]);
 
 		for (int i = 0; i < N; i++) {
-			currentP[i] += delta[i];
+			p[i] += delta[i];
 		}
 	}
 }
@@ -53,9 +56,9 @@ void BresenhamLineAlgInt() {
 	const int startP[N] = { 0, 3 };
 	const int endP[N] = { -200, 103 }; // концы отрезка не совпадают с началом
 
-	int currentP[N];
+	int p[N];
 	for (int i = 0; i < N; i++) {
-		currentP[i] = startP[i];
+		p[i] = startP[i];
 	}
 
 	int delta[N]; //модуль расстояния
@@ -78,18 +81,70 @@ void BresenhamLineAlgInt() {
 
 	int errPixel = 2 * delta[1] - delta[0]; // иниц. с поправкой на 0,5 пиксела
 	for (int currentStep = 0; currentStep < delta[0]; currentStep++) {
-		cout << currentP[0] << ' ' << currentP[1] << ' ' << errPixel << endl;
-		glVertex2i(currentP[0], currentP[1]);
+		cout << p[0] << ' ' << p[1] << ' ' << errPixel << endl;
+		glVertex2i(p[0], p[1]);
 
 		if (errPixel >= 0) {
-			currentP[shorterDeltaCoordIndex] += signum[shorterDeltaCoordIndex];
+			p[shorterDeltaCoordIndex] += signum[shorterDeltaCoordIndex];
 			errPixel -= 2 * delta[0];
 		}
 
-		currentP[longerDeltaCoordIndex] += signum[longerDeltaCoordIndex];
+		p[longerDeltaCoordIndex] += signum[longerDeltaCoordIndex];
 		errPixel += 2 * delta[1];
 	}
+}
 
+enum SigmaCase{
+	MOVE_HORIZONTAL,
+	MOVE_VERTICAL,
+	MOVE_DIAGONAL
+};
+
+void circleQuad1(const int x, const int r) {
+	const int N = 2; // 0=x , 1=y
+	int p[N]; //{ x, R };
+	p[X_ID] = x;
+	p[Y_ID] = r;
+
+	int delta = 2 * (1 - r);
+	const int LIM = 0;
+	int sigma = 0;
+	SigmaCase sigmaCase;
+
+	while (p[Y_ID] > LIM) {
+		cout << "x= " << p[X_ID] << "y= " << p[Y_ID] << "delta= " << delta << "sigma=" << sigma << endl;
+		glVertex2i(p[X_ID], p[Y_ID]);
+
+		if (delta < 0) {
+			sigma = 2 * delta + 2 * p[Y_ID] - 1;
+			sigma <= 0 ? sigmaCase = MOVE_HORIZONTAL : sigmaCase = MOVE_DIAGONAL;			
+		}
+		else if (delta > 0) {
+			sigma = 2 * delta + 2 * p[X_ID] - 1;
+			sigma <= 0 ? sigmaCase = MOVE_DIAGONAL : sigmaCase = MOVE_VERTICAL;
+		}
+		else {
+			sigmaCase = MOVE_DIAGONAL;
+		}
+
+		switch (sigmaCase)		{
+		case MOVE_HORIZONTAL:
+			p[X_ID]++;
+			delta += 2 * p[X_ID] + 1;
+			break;
+		case MOVE_VERTICAL:
+			p[Y_ID]--;
+			delta += -2 * p[Y_ID] + 1;
+			break;
+		case MOVE_DIAGONAL:
+			p[X_ID]++;
+			p[Y_ID]--;
+			delta += 2 * p[X_ID] - 2 * p[Y_ID] + 2;
+			break;
+		default:
+			break;
+		}
+	}
 }
 
 void Display() {
@@ -103,6 +158,9 @@ void Display() {
 
 	glColor3f(1.0f, 0.0f, 0.0f);
 	BresenhamLineAlgInt();
+
+	glColor3f(0.5f, 0.0f, 0.5f);
+	circleQuad1(0, 100);
 
 	glEnd();
 
